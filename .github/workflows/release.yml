@@ -9,7 +9,79 @@ permissions:
   contents: write
 
 jobs:
+
+  # ── Create the release with full instructions ──────────────────────
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: true
+          generate_release_notes: false
+          body: |
+            ## Bibbo ${{ github.ref_name }}
+
+            A native desktop knowledge graph. Write nodes. Connections emerge.
+
+            ---
+
+            ### Windows
+
+            1. Download **`bibbo-windows.exe`** below
+            2. Double-click to run — no installation needed
+            3. If Windows Defender shows a warning, click **More info → Run anyway**
+
+            ---
+
+            ### Mac — Apple Silicon (M1 / M2 / M3)
+
+            1. Download **`bibbo-mac-arm64`** below
+            2. Right-click the file in Finder → **Open** → **Open**
+               *(required the first time to bypass Gatekeeper)*
+            3. If still blocked: **System Settings → Privacy & Security → Open Anyway**
+
+            Or via Terminal:
+            ```
+            chmod +x ~/Downloads/bibbo-mac-arm64
+            ~/Downloads/bibbo-mac-arm64
+            ```
+
+            ---
+
+            ### Mac — Intel
+
+            Same steps as above but download **`bibbo-mac-intel`** instead.
+
+            ```
+            chmod +x ~/Downloads/bibbo-mac-intel
+            ~/Downloads/bibbo-mac-intel
+            ```
+
+            ---
+
+            ### Linux
+
+            1. Download **`bibbo-linux`** below
+            2. Open a terminal and run:
+            ```
+            chmod +x ~/Downloads/bibbo-linux
+            ~/Downloads/bibbo-linux
+            ```
+
+            ---
+
+            **Not sure which Mac you have?** Click the Apple menu → About This Mac.
+            If it says Apple M1 / M2 / M3 → download `bibbo-mac-arm64`.
+            If it says Intel → download `bibbo-mac-intel`.
+
+            ---
+
+            Your data is stored locally on your machine. No cloud, no account needed.
+
+  # ── Build all platforms and attach to the release ─────────────────
   build:
+    needs: create-release
     strategy:
       matrix:
         include:
@@ -56,30 +128,7 @@ jobs:
         shell: bash
         run: cp ${{ matrix.artifact }} ${{ matrix.asset }}
 
-      - name: Upload to release
+      - name: Attach to release
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ matrix.asset }}
-          draft: false
-          prerelease: true
-          generate_release_notes: false
-          body: |
-            ## Bibbo ${{ github.ref_name }}
-
-            Download the file for your platform:
-
-            | Platform | File |
-            |---|---|
-            | Windows | `bibbo-windows.exe` |
-            | Mac (M1/M2/M3) | `bibbo-mac-arm64` |
-            | Mac (Intel) | `bibbo-mac-intel` |
-            | Linux | `bibbo-linux` |
-
-            **Mac:** After downloading, open Terminal and run:
-            ```
-            chmod +x bibbo-mac-arm64
-            ./bibbo-mac-arm64
-            ```
-            Or right-click the file → Open (required first time to bypass Gatekeeper).
-
-            **Windows:** Double-click `bibbo-windows.exe` to run.
