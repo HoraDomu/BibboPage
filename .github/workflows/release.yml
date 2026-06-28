@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: target/release/bibbo.exe
+            asset: bibbo-windows.exe
+
+          - os: macos-latest
+            artifact: target/release/bibbo
+            asset: bibbo-mac-arm64
+
+          - os: macos-13
+            artifact: target/release/bibbo
+            asset: bibbo-mac-intel
+
+          - os: ubuntu-latest
+            artifact: target/release/bibbo
+            asset: bibbo-linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libx11-dev \
+            libgl1-mesa-dev \
+            pkg-config
+
+      - name: Build
+        run: cargo build --release --bin bibbo
+
+      - name: Stage artifact
+        shell: bash
+        run: cp ${{ matrix.artifact }} ${{ matrix.asset }}
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset }}
+          draft: false
+          prerelease: true
+          generate_release_notes: false
+          body: |
+            ## Bibbo ${{ github.ref_name }}
+
+            Download the file for your platform:
+
+            | Platform | File |
+            |---|---|
+            | Windows | `bibbo-windows.exe` |
+            | Mac (M1/M2/M3) | `bibbo-mac-arm64` |
+            | Mac (Intel) | `bibbo-mac-intel` |
+            | Linux | `bibbo-linux` |
+
+            **Mac:** After downloading, open Terminal and run:
+            ```
+            chmod +x bibbo-mac-arm64
+            ./bibbo-mac-arm64
+            ```
+            Or right-click the file → Open (required first time to bypass Gatekeeper).
+
+            **Windows:** Double-click `bibbo-windows.exe` to run.

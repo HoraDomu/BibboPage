@@ -8,3 +8,4 @@ eframe = "0.31"
 egui = "0.31"
 rusqlite = { version = "0.31", features = ["bundled"] }
 rfd = "0.15"
+dirs = "5"

@@ -225,7 +225,14 @@ impl BibboApp {
         v.window_fill = egui::Color32::from_rgb(10, 10, 14);
         cc.egui_ctx.set_visuals(v);
 
-        let db = Connection::open("bibbo.db").expect("open db");
+        let db_path = {
+            let mut p = dirs::data_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+            p.push("Bibbo");
+            std::fs::create_dir_all(&p).ok();
+            p.push("bibbo.db");
+            p
+        };
+        let db = Connection::open(&db_path).expect("open db");
         db.execute_batch(
             "CREATE TABLE IF NOT EXISTS nodes (
                 id        INTEGER PRIMARY KEY AUTOINCREMENT,
