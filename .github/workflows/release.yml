@@ -114,9 +114,10 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
+          MAIN_JAR=$(basename build/install/bibbo/lib/bibbo-*.jar)
           "$JAVA_HOME/bin/jpackage" \
             --input build/install/bibbo/lib \
-            --main-jar bibbo-0.6.0.jar \
+            --main-jar "$MAIN_JAR" \
             --main-class com.bibbo.Main \
             --name Bibbo \
             --app-version "$VERSION" \
@@ -132,12 +133,19 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
+          MAIN_JAR=$(basename build/install/bibbo/lib/bibbo-*.jar)
+          # macOS requires first version component >= 1
+          if [[ "${VERSION%%.*}" == "0" ]]; then
+            PKG_VERSION="1.${VERSION#*.}"
+          else
+            PKG_VERSION="$VERSION"
+          fi
           "$JAVA_HOME/bin/jpackage" \
             --input build/install/bibbo/lib \
-            --main-jar bibbo-0.6.0.jar \
+            --main-jar "$MAIN_JAR" \
             --main-class com.bibbo.Main \
             --name Bibbo \
-            --app-version "$VERSION" \
+            --app-version "$PKG_VERSION" \
             --type dmg \
             --dest build/dist
 
@@ -147,9 +155,10 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
+          MAIN_JAR=$(basename build/install/bibbo/lib/bibbo-*.jar)
           "$JAVA_HOME/bin/jpackage" \
             --input build/install/bibbo/lib \
-            --main-jar bibbo-0.6.0.jar \
+            --main-jar "$MAIN_JAR" \
             --main-class com.bibbo.Main \
             --name Bibbo \
             --app-version "$VERSION" \
@@ -161,9 +170,7 @@ jobs:
         shell: bash
         run: |
           cd build/dist
-          # jpackage names it "Bibbo-<version>.*" — rename to our asset name
           for f in Bibbo-*; do
-            ext="${f##*.}"
             cp "$f" "${{ matrix.asset }}"
           done
 
