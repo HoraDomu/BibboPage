@@ -163,6 +163,7 @@ public class BibboApp {
 
         Scene scene = new Scene(root, 1200, 800);
         scene.setFill(Color.rgb(4, 4, 6));
+        scene.getStylesheets().add(getClass().getResource("app.css").toExternalForm());
         scene.setOnKeyPressed(this::handleKey);
 
         stage.setTitle("Bibbo");
@@ -212,6 +213,7 @@ public class BibboApp {
         sep.setStyle("-fx-background-color: rgb(30,29,38);");
 
         bodyArea = new TextArea();
+        bodyArea.getStyleClass().add("writing-area");
         bodyArea.setPromptText("Start writing...  use [[Node Title]] to link ideas");
         bodyArea.setWrapText(true);
         bodyArea.setPrefRowCount(20);
