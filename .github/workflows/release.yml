@@ -108,6 +108,21 @@ jobs:
         shell: bash
         run: ./gradlew installDist
 
+      - name: Prepare jpackage input
+        shell: bash
+        run: |
+          # Liberica JDK already has JavaFX as built-in modules.
+          # Strip Maven JavaFX JARs from the input so jpackage doesn't
+          # see them twice and hit module conflicts at bundle time.
+          mkdir -p build/jpackage-input
+          for jar in build/install/bibbo/lib/*.jar; do
+            name=$(basename "$jar")
+            case "$name" in
+              javafx-*) ;;  # skip — already in bundled JDK
+              *) cp "$jar" build/jpackage-input/ ;;
+            esac
+          done
+
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: bash
@@ -116,7 +131,7 @@ jobs:
           VERSION="${VERSION#v}"
           MAIN_JAR=$(basename build/install/bibbo/lib/bibbo-*.jar)
           "$JAVA_HOME/bin/jpackage" \
-            --input build/install/bibbo/lib \
+            --input build/jpackage-input \
             --main-jar "$MAIN_JAR" \
             --main-class com.bibbo.Main \
             --name Bibbo \
@@ -134,14 +149,14 @@ jobs:
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
           MAIN_JAR=$(basename build/install/bibbo/lib/bibbo-*.jar)
-          # macOS requires first version component >= 1
+          # macOS CFBundleShortVersionString requires first component >= 1
           if [[ "${VERSION%%.*}" == "0" ]]; then
             PKG_VERSION="1.${VERSION#*.}"
           else
             PKG_VERSION="$VERSION"
           fi
           "$JAVA_HOME/bin/jpackage" \
-            --input build/install/bibbo/lib \
+            --input build/jpackage-input \
             --main-jar "$MAIN_JAR" \
             --main-class com.bibbo.Main \
             --name Bibbo \
@@ -157,7 +172,7 @@ jobs:
           VERSION="${VERSION#v}"
           MAIN_JAR=$(basename build/install/bibbo/lib/bibbo-*.jar)
           "$JAVA_HOME/bin/jpackage" \
-            --input build/install/bibbo/lib \
+            --input build/jpackage-input \
             --main-jar "$MAIN_JAR" \
             --main-class com.bibbo.Main \
             --name Bibbo \
@@ -170,9 +185,11 @@ jobs:
         shell: bash
         run: |
           cd build/dist
-          for f in Bibbo-*; do
-            cp "$f" "${{ matrix.asset }}"
-          done
+          # Find whatever jpackage produced (name format varies by OS/version)
+          # and copy it to the expected asset name for the release.
+          BUILT=$(ls *.msi *.dmg *.deb *.rpm 2>/dev/null | head -1)
+          echo "Built: $BUILT"
+          cp "$BUILT" "${{ matrix.asset }}"
 
       - name: Attach to release
         uses: softprops/action-gh-release@v2
