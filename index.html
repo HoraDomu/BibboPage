@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bibbo — Think in connections, not folders</title>
+  <meta name="description" content="A native desktop knowledge graph by HoraDomu. Write nodes. Connections emerge. Private beta — join the waitlist." />
+  <meta property="og:title" content="Bibbo — Think in connections, not folders" />
+  <meta property="og:description" content="A native desktop knowledge graph. Write nodes. Connections emerge." />
+  <meta property="og:type" content="website" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #04040a;
+      --surface:      #0d0d14;
+      --surface2:     #111118;
+      --border:       #18181f;
+      --border2:      #22222c;
+      --text:         #eeedf5;
+      --muted:        #6b6880;
+      --dim:          #2e2c3a;
+      --accent:       #7c3aed;
+      --accent-mid:   #9d5ff0;
+      --accent-glow:  rgba(124, 58, 237, 0.12);
+      --accent-border: rgba(124, 58, 237, 0.28);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ─── Nav ─────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 40px;
+      background: rgba(4,4,10,0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .nav-logo {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .nav-by {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .nav-by a {
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .nav-by a:hover { color: var(--text); }
+
+    .beta-pill {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent-mid);
+      background: var(--accent-glow);
+      border: 1px solid var(--accent-border);
+      border-radius: 20px;
+      padding: 4px 11px;
+    }
+
+    /* ─── Hero ─────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 140px 24px 100px;
+      position: relative;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 600px;
+      background: radial-gradient(ellipse at 50% 30%, rgba(124,58,237,0.07) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-logo {
+      width: min(640px, 90vw);
+      margin-bottom: 48px;
+      opacity: 0.95;
+    }
+
+    .hero-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--accent-mid);
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: clamp(36px, 6.5vw, 76px);
+      font-weight: 700;
+      letter-spacing: -2.5px;
+      line-height: 1.04;
+      max-width: 780px;
+      margin-bottom: 24px;
+      background: linear-gradient(145deg, #eeedf5 20%, #7b788f 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 480px;
+      margin: 0 auto 52px;
+      line-height: 1.75;
+    }
+
+    /* ─── Waitlist ──────────────────────────────────────────── */
+    .waitlist-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .waitlist-form {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .waitlist-form input[type="email"] {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 9px;
+      color: var(--text);
+      font-size: 15px;
+      padding: 13px 20px;
+      width: 290px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .waitlist-form input::placeholder { color: var(--dim); }
+
+    .waitlist-form input:focus {
+      border-color: var(--accent-border);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .waitlist-form button {
+      background: var(--accent);
+      border: none;
+      border-radius: 9px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 13px 26px;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .waitlist-form button:hover { background: var(--accent-mid); }
+    .waitlist-form button:active { transform: scale(0.97); }
+
+    .waitlist-note {
+      font-size: 12px;
+      color: var(--dim);
+    }
+
+    .confirmed {
+      display: none;
+      font-size: 14px;
+      color: #4ade80;
+      background: rgba(74,222,128,0.08);
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 8px;
+      padding: 10px 20px;
+    }
+
+    /* ─── Stats row ─────────────────────────────────────────── */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      padding: 56px 24px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .stat { text-align: center; }
+
+    .stat-num {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      color: var(--text);
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ─── Features ──────────────────────────────────────────── */
+    .section {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 96px 24px;
+    }
+
+    .section-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent-mid);
+      background: var(--accent-glow);
+      border: 1px solid var(--accent-border);
+      border-radius: 4px;
+      padding: 3px 10px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: clamp(26px, 4vw, 44px);
+      font-weight: 700;
+      letter-spacing: -1.2px;
+      line-height: 1.12;
+      margin-bottom: 60px;
+      max-width: 580px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--border);
+    }
+
+    .card {
+      background: var(--bg);
+      padding: 36px 32px;
+      transition: background 0.18s;
+    }
+
+    .card:hover { background: var(--surface); }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      font-size: 16px;
+    }
+
+    .card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+
+    .card p {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ─── vs section ────────────────────────────────────────── */
+    .vs-section {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .vs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    @media (max-width: 640px) { .vs-grid { grid-template-columns: 1fr; } }
+
+    .vs-col {
+      background: var(--surface2);
+      padding: 36px 32px;
+    }
+
+    .vs-col.theirs { background: var(--surface); }
+
+    .vs-col-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .vs-col.ours .vs-col-label { color: var(--accent-mid); }
+
+    .vs-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .vs-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .vs-icon.yes { background: rgba(74,222,128,0.12); color: #4ade80; border: 1px solid rgba(74,222,128,0.2); }
+    .vs-icon.no  { background: rgba(255,255,255,0.04); color: var(--dim); border: 1px solid var(--border2); }
+
+    .vs-text {
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+
+    .vs-text.active { color: var(--text); }
+    .vs-text.passive { color: var(--muted); }
+
+    /* ─── Science ───────────────────────────────────────────── */
+    .science-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 720px) { .science-grid { grid-template-columns: 1fr; } }
+
+    .sci-card {
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 28px 24px;
+    }
+
+    .sci-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .sci-card p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ─── Bottom CTA ────────────────────────────────────────── */
+    .cta {
+      text-align: center;
+      padding: 100px 24px 120px;
+    }
+
+    .cta h2 {
+      font-size: clamp(30px, 5vw, 56px);
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      margin-bottom: 16px;
+    }
+
+    .cta p {
+      font-size: 16px;
+      color: var(--muted);
+      margin-bottom: 40px;
+    }
+
+    /* ─── Footer ────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    footer p, footer a {
+      font-size: 12px;
+      color: var(--dim);
+      text-decoration: none;
+    }
+
+    footer a:hover { color: var(--muted); }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="nav-left">
+      <a class="nav-logo" href="#">Bibbo</a>
+      <span class="nav-by">by <a href="https://github.com/HoraDomu" target="_blank" rel="noopener">HoraDomu</a></span>
+    </div>
+    <span class="beta-pill">Private Beta</span>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <img class="hero-logo" src="logo.svg" alt="Bibbo" />
+    <p class="hero-eyebrow">Native desktop · Knowledge graph · Local first</p>
+    <h1>Think in connections,<br/>not folders.</h1>
+    <p class="hero-sub">
+      Bibbo maps the way your brain actually works.
+      Write a node. Link it with <code style="font-family:monospace;font-size:15px;color:#9d5ff0;">[[Title]]</code>. Watch your understanding take shape.
+    </p>
+
+    <div class="waitlist-wrap">
+      <form class="waitlist-form" id="form1" onsubmit="join(event,'form1','done1','email1')">
+        <input type="email" id="email1" placeholder="your@email.com" required />
+        <button type="submit">Request early access</button>
+      </form>
+      <p class="waitlist-note">Private beta is limited. No spam, ever.</p>
+      <p class="confirmed" id="done1">You're on the list — we'll reach out when you're up.</p>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-num">0</span>
+      <p class="stat-label">Folders needed</p>
+    </div>
+    <div class="stat">
+      <span class="stat-num">1</span>
+      <p class="stat-label">Global graph</p>
+    </div>
+    <div class="stat">
+      <span class="stat-num">∞</span>
+      <p class="stat-label">Connections possible</p>
+    </div>
+    <div class="stat">
+      <span class="stat-num">Local</span>
+      <p class="stat-label">Your data, on your machine</p>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="section">
+    <span class="section-tag">Features</span>
+    <h2 class="section-title">Every decision exists to help you think more clearly.</h2>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-icon">◈</div>
+        <h3>Living Connections</h3>
+        <p>Click any edge and see exactly why two nodes are connected — which ideas reference them together, how recently, how strongly. Not just that they're linked. Why.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⬡</div>
+        <h3>One global graph</h3>
+        <p>No folders. No vaults. No hierarchy. One graph. Structure emerges from connections, not from where you decide to file things.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">◉</div>
+        <h3>Physics-based layout</h3>
+        <p>Nodes repel, spring toward their connections, settle into organic arrangements. Drag one and the whole network shifts. It feels like thinking, not filing.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">◎</div>
+        <h3>Temporal salience</h3>
+        <p>Recently edited nodes glow. Old nodes fade. The graph is a live picture of what's active in your mind right now, not an equal-weight archive.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">▣</div>
+        <h3>Weight from attention</h3>
+        <p>Node size grows with incoming references. Concepts your thinking returns to become visually prominent automatically — derived from your own mind, not an algorithm.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">◌</div>
+        <h3>Native &amp; private</h3>
+        <p>No Electron. No cloud. No account. A native app with bundled runtime. Opens instantly. Your data stays in a local file on your machine. Always.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- vs Obsidian -->
+  <div class="vs-section">
+    <div class="section">
+      <span class="section-tag">Comparison</span>
+      <h2 class="section-title">In Obsidian, the graph is a feature. In Bibbo, the graph is the app.</h2>
+
+      <div class="vs-grid">
+        <div class="vs-col theirs">
+          <p class="vs-col-label">Obsidian</p>
+          <div class="vs-row"><div class="vs-icon no">✕</div><p class="vs-text passive">Graph is decorative — you open it to admire it</p></div>
+          <div class="vs-row"><div class="vs-icon no">✕</div><p class="vs-text passive">Still nudges you toward folders and structure</p></div>
+          <div class="vs-row"><div class="vs-icon no">✕</div><p class="vs-text passive">Links are boolean — connected or not connected</p></div>
+          <div class="vs-row"><div class="vs-icon no">✕</div><p class="vs-text passive">Static layout, nodes don't respond to each other</p></div>
+          <div class="vs-row"><div class="vs-icon no">✕</div><p class="vs-text passive">Electron — ships a full browser engine</p></div>
+          <div class="vs-row"><div class="vs-icon no">✕</div><p class="vs-text passive">Platform with plugins, themes, config decisions</p></div>
+        </div>
+        <div class="vs-col ours">
+          <p class="vs-col-label">Bibbo</p>
+          <div class="vs-row"><div class="vs-icon yes">✓</div><p class="vs-text active">You write into the graph. Navigate through it. It is the app.</p></div>
+          <div class="vs-row"><div class="vs-icon yes">✓</div><p class="vs-text active">No folders. One graph. Structure emerges from connections.</p></div>
+          <div class="vs-row"><div class="vs-icon yes">✓</div><p class="vs-text active">Living Connections show you why two nodes are related.</p></div>
+          <div class="vs-row"><div class="vs-icon yes">✓</div><p class="vs-text active">Physics simulation — drag a node and the network responds.</p></div>
+          <div class="vs-row"><div class="vs-icon yes">✓</div><p class="vs-text active">Native binary, bundled runtime, opens instantly.</p></div>
+          <div class="vs-row"><div class="vs-icon yes">✓</div><p class="vs-text active">One focused experience. No configuration. You open it and think.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Science -->
+  <div class="section">
+    <span class="section-tag">The science</span>
+    <h2 class="section-title">Built around how memory actually works.</h2>
+
+    <div class="science-grid">
+      <div class="sci-card">
+        <h3>Associative recall</h3>
+        <p>Collins &amp; Loftus (1975) showed memory works through spreading activation — you access ideas by traversing related concepts, not by navigating folders. Bibbo mirrors this.</p>
+      </div>
+      <div class="sci-card">
+        <h3>Elaborative interrogation</h3>
+        <p>The act of linking two concepts forces you to articulate why they're related. That questioning act is itself the learning act. A link isn't the insight — the <em>why</em> is.</p>
+      </div>
+      <div class="sci-card">
+        <h3>Recency &amp; frequency bias</h3>
+        <p>The brain naturally weights recently and frequently accessed memories as more salient. Bibbo's temporal decay and node weight mirror these cognitive biases visually.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom CTA -->
+  <div class="cta">
+    <h2>Get early access.</h2>
+    <p>Private beta is limited. We're building this carefully, one feature at a time.</p>
+
+    <div class="waitlist-wrap">
+      <form class="waitlist-form" id="form2" onsubmit="join(event,'form2','done2','email2')">
+        <input type="email" id="email2" placeholder="your@email.com" required />
+        <button type="submit">Join the waitlist</button>
+      </form>
+      <p class="waitlist-note">No spam. You'll hear from us when we're ready.</p>
+      <p class="confirmed" id="done2">You're on the list — we'll reach out when you're up.</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2026 <a href="https://github.com/HoraDomu" target="_blank" rel="noopener">HoraDomu</a>. All rights reserved.</p>
+    <p>You may use Bibbo freely. You may not copy or redistribute the source code.</p>
+    <p>Native · Local · Private</p>
+  </footer>
+
+  <script>
+    function join(e, formId, doneId, emailId) {
+      e.preventDefault();
+      const email = encodeURIComponent(document.getElementById(emailId).value);
+      window.location.href =
+        'mailto:dommcpro@gmail.com?subject=Bibbo%20Waitlist&body=Please%20add%20me%20to%20the%20Bibbo%20waitlist%3A%20' + email;
+      document.getElementById(doneId).style.display = 'block';
+      document.getElementById(formId).style.display = 'none';
+    }
+  </script>
+
+</body>
+</html>
