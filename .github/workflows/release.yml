@@ -112,24 +112,28 @@ jobs:
         shell: bash
         run: |
           # Liberica JDK already has JavaFX as built-in modules.
-          # Strip Maven JavaFX JARs from the input so jpackage doesn't
-          # see them twice and hit module conflicts at bundle time.
+          # Strip Maven JavaFX JARs so jpackage doesn't see them twice.
+          # Use wildcard on install dir — applicationName = 'Bibbo' (capital B).
           mkdir -p build/jpackage-input
-          for jar in build/install/bibbo/lib/*.jar; do
+          for jar in build/install/*/lib/*.jar; do
             name=$(basename "$jar")
             case "$name" in
-              javafx-*) ;;  # skip — already in bundled JDK
+              javafx-*) ;;
               *) cp "$jar" build/jpackage-input/ ;;
             esac
           done
+          echo "jpackage-input contents:"
+          ls build/jpackage-input/
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: bash
         run: |
+          set -e
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
-          MAIN_JAR=$(basename build/install/bibbo/lib/bibbo-*.jar)
+          MAIN_JAR=$(basename build/install/*/lib/bibbo-*.jar)
+          echo "VERSION=$VERSION  MAIN_JAR=$MAIN_JAR"
           "$JAVA_HOME/bin/jpackage" \
             --input build/jpackage-input \
             --main-jar "$MAIN_JAR" \
@@ -141,20 +145,24 @@ jobs:
             --win-dir-chooser \
             --win-shortcut \
             --win-menu
+          echo "build/dist contents:"
+          ls build/dist/
 
       - name: Package (macOS)
         if: runner.os == 'macOS'
         shell: bash
         run: |
+          set -e
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
-          MAIN_JAR=$(basename build/install/bibbo/lib/bibbo-*.jar)
+          MAIN_JAR=$(basename build/install/*/lib/bibbo-*.jar)
           # macOS CFBundleShortVersionString requires first component >= 1
           if [[ "${VERSION%%.*}" == "0" ]]; then
             PKG_VERSION="1.${VERSION#*.}"
           else
             PKG_VERSION="$VERSION"
           fi
+          echo "VERSION=$VERSION  PKG_VERSION=$PKG_VERSION  MAIN_JAR=$MAIN_JAR"
           "$JAVA_HOME/bin/jpackage" \
             --input build/jpackage-input \
             --main-jar "$MAIN_JAR" \
@@ -163,14 +171,18 @@ jobs:
             --app-version "$PKG_VERSION" \
             --type dmg \
             --dest build/dist
+          echo "build/dist contents:"
+          ls build/dist/
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
         shell: bash
         run: |
+          set -e
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
-          MAIN_JAR=$(basename build/install/bibbo/lib/bibbo-*.jar)
+          MAIN_JAR=$(basename build/install/*/lib/bibbo-*.jar)
+          echo "VERSION=$VERSION  MAIN_JAR=$MAIN_JAR"
           "$JAVA_HOME/bin/jpackage" \
             --input build/jpackage-input \
             --main-jar "$MAIN_JAR" \
@@ -180,18 +192,23 @@ jobs:
             --type deb \
             --dest build/dist \
             --linux-shortcut
+          echo "build/dist contents:"
+          ls build/dist/
 
       - name: Rename artifact
         shell: bash
         run: |
-          cd build/dist
-          # Find whatever jpackage produced (name format varies by OS/version)
-          # and copy it to the expected asset name for the release.
-          BUILT=$(ls *.msi *.dmg *.deb *.rpm 2>/dev/null | head -1)
+          # Use find so we catch the file regardless of exact name or subdirectory
+          BUILT=$(find build/dist -type f \( -name "*.msi" -o -name "*.dmg" -o -name "*.deb" -o -name "*.rpm" \) | head -1)
           echo "Built: $BUILT"
+          if [ -z "$BUILT" ]; then
+            echo "ERROR: no installer found in build/dist"
+            ls -la build/dist/ || true
+            exit 1
+          fi
           cp "$BUILT" "${{ matrix.asset }}"
 
       - name: Attach to release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/dist/${{ matrix.asset }}
+          files: ${{ matrix.asset }}
