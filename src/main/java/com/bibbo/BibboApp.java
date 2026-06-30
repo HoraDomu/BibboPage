@@ -58,9 +58,13 @@ public class BibboApp {
     private Database db;
     private final List<Node> nodes = new ArrayList<>();
     private final List<Edge> edges = new ArrayList<>();
-    private final Map<Long, Node> nodeById    = new HashMap<>();
-    private final Map<String, Long> titleIndex = new HashMap<>();
+    private final Map<Long, Node>    nodeById    = new HashMap<>();
+    private final Map<String, Long>  titleIndex  = new HashMap<>();
     private final Map<String, Set<Long>> tagRefs = new HashMap<>();
+    // Cached per-frame data — rebuilt only when the underlying list changes
+    private final Map<Long, Integer> connCounts  = new HashMap<>();
+    private final Map<Long, Integer> physicsIdx  = new HashMap<>();
+    private boolean connCountsDirty = true;
 
     // ── Camera ────────────────────────────────────────────────────────────────
     private double panX, panY, panVelX, panVelY;
@@ -153,12 +157,17 @@ public class BibboApp {
         } catch (IOException | SQLException e) {
             throw new RuntimeException("Failed to open database", e);
         }
-        for (Node n : nodes) {
+        for (int i = 0; i < nodes.size(); i++) {
+            Node n = nodes.get(i);
             nodeById.put(n.id, n);
             titleIndex.put(Utils.normalize(n.title), n.id);
             for (String tag : Utils.parseLinks(n.body))
                 tagRefs.computeIfAbsent(Utils.normalize(tag), k -> new HashSet<>()).add(n.id);
+            physicsIdx.put(n.id, i);
         }
+        rebuildConnCounts();
+        // Large graphs are already laid out — skip physics until user drags
+        if (nodes.size() > 2000) physicsAwake = false;
         colorIdx = nodes.size() % COLORS.length;
     }
 
@@ -564,6 +573,8 @@ public class BibboApp {
         }
         nodes.removeIf(n -> n.id == id);
         edges.removeIf(e -> e.sourceId == id || e.targetId == id);
+        connCountsDirty = true;
+        rebuildPhysicsIdx();
         if (Objects.equals(localRoot, id)) {
             localRoot = null;
             localVisible.clear();
@@ -625,6 +636,7 @@ public class BibboApp {
             newNode.vy = ky;
             nodes.add(newNode);
             nodeById.put(id, newNode);
+            physicsIdx.put(id, nodes.size() - 1);
             titleIndex.put(Utils.normalize(title), id);
             for (String tag : Utils.parseLinks(body))
                 tagRefs.computeIfAbsent(Utils.normalize(tag), k -> new HashSet<>()).add(id);
@@ -654,6 +666,22 @@ public class BibboApp {
         } else {
             Platform.runLater(() -> canvas.requestFocus());
         }
+    }
+
+    // ── Cached index helpers ──────────────────────────────────────────────────
+
+    private void rebuildConnCounts() {
+        connCounts.clear();
+        for (Edge e : edges) {
+            connCounts.merge(e.sourceId, 1, Integer::sum);
+            connCounts.merge(e.targetId, 1, Integer::sum);
+        }
+        connCountsDirty = false;
+    }
+
+    private void rebuildPhysicsIdx() {
+        physicsIdx.clear();
+        for (int i = 0; i < nodes.size(); i++) physicsIdx.put(nodes.get(i).id, i);
     }
 
     // ── Edge building ─────────────────────────────────────────────────────────
@@ -689,6 +717,7 @@ public class BibboApp {
             try { db.insertEdge(nodeId, targetId); } catch (SQLException ex) { ex.printStackTrace(); }
             edges.add(new Edge(nodeId, targetId));
         }
+        connCountsDirty = true;
     }
 
     private void rebuildAffectedEdges(long changedId, String oldTitleNorm, String newTitleNorm) {
@@ -786,6 +815,7 @@ public class BibboApp {
             Node imp = new Node(id, title, body, COLORS[ci], pos[0], pos[1]);
             nodes.add(imp);
             nodeById.put(id, imp);
+            physicsIdx.put(id, nodes.size() - 1);
             titleIndex.put(Utils.normalize(title), id);
             for (String tag : Utils.parseLinks(body))
                 tagRefs.computeIfAbsent(Utils.normalize(tag), k -> new HashSet<>()).add(id);
@@ -957,12 +987,8 @@ public class BibboApp {
             if (doEnter && !currentSearchResults.isEmpty())           { flyToNode(currentSearchResults.get(searchSel)); }
         }
 
-        // Build conn counts
-        Map<Long, Integer> connCounts = new HashMap<>();
-        for (Edge e : edges) {
-            connCounts.merge(e.sourceId, 1, Integer::sum);
-            connCounts.merge(e.targetId, 1, Integer::sum);
-        }
+        // Refresh conn counts only when the edge list has changed
+        if (connCountsDirty) rebuildConnCounts();
 
         boolean inLocal = (localRoot != null);
         Set<Long> localVis = new HashSet<>(localVisible);
@@ -1010,13 +1036,14 @@ public class BibboApp {
             }
             if (hitIdx >= 0) {
                 nodes.get(hitIdx).dragging = true;
+                physicsAwake = true; // wake physics when user interacts
             } else {
                 // Edge hit-test
                 boolean edgeHit = false;
                 for (Edge e : edges) {
                     if (inLocal && (!localVis.contains(e.sourceId) || !localVis.contains(e.targetId))) continue;
-                    Node src = nodes.stream().filter(n -> n.id == e.sourceId).findFirst().orElse(null);
-                    Node tgt = nodes.stream().filter(n -> n.id == e.targetId).findFirst().orElse(null);
+                    Node src = nodeById.get(e.sourceId);
+                    Node tgt = nodeById.get(e.targetId);
                     if (src == null || tgt == null) continue;
                     double dist = Utils.pointSegmentDist(
                         pointerX, pointerY,
@@ -1101,11 +1128,8 @@ public class BibboApp {
         }
 
         if (physicsAwake) {
-            Map<Long, Integer> idToIdx = new HashMap<>();
-            for (int i = 0; i < n; i++) idToIdx.put(nodes.get(i).id, i);
-
             for (Edge e : edges) {
-                Integer ii = idToIdx.get(e.sourceId), jj = idToIdx.get(e.targetId);
+                Integer ii = physicsIdx.get(e.sourceId), jj = physicsIdx.get(e.targetId);
                 if (ii == null || jj == null) continue;
                 double dx = nodes.get(jj).x - nodes.get(ii).x;
                 double dy = nodes.get(jj).y - nodes.get(ii).y;
